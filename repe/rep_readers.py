@@ -9,23 +9,42 @@ def project_onto_direction(H, direction):
     """Project matrix H (n, d_1) onto direction vector (d_2,)"""
     # Calculate the magnitude of the direction vector
      # Ensure H and direction are on the same device (CPU or GPU)
-    if type(direction) != torch.Tensor:
-        H = torch.Tensor(H).cuda()
-    if type(direction) != torch.Tensor:
-        direction = torch.Tensor(direction)
-        direction = direction.to(H.device)
+    # 确保H和direction是torch.Tensor类型
+    if not isinstance(H, torch.Tensor):
+        H = torch.tensor(H)
+    if not isinstance(direction, torch.Tensor):
+        direction = torch.tensor(direction)
+
+    # 获取H的设备，并确保direction也在同一设备上
+    device = H.device
+    direction = direction.to(device)
+
+    # 计算direction向量的大小
     mag = torch.norm(direction)
-    assert not torch.isinf(mag).any()
+    assert not torch.isinf(mag).any(), "The magnitude of the direction vector is infinite"
+    
     # Calculate the projection
     projection = H.matmul(direction) / mag
     return projection
 
 def recenter(x, mean=None):
-    x = torch.Tensor(x).cuda()
-    if mean is None:
-        mean = torch.mean(x,axis=0,keepdims=True).cuda()
+    # 首先检查x是否已经是一个张量，如果不是，则转换为张量
+    if not isinstance(x, torch.Tensor):
+        x = torch.tensor(x, device="cuda", dtype=torch.float32)
     else:
-        mean = torch.Tensor(mean).cuda()
+        # 如果x已经是一个张量，确保它的数据类型为float32并且在正确的设备上
+        x = x.to(device="cuda", dtype=torch.float32)
+
+    # 处理mean，确保它也在同一设备上且具有相同的数据类型
+    if mean is None:
+        mean = torch.mean(x, axis=0, keepdims=True)
+    else:
+        if not isinstance(mean, torch.Tensor):
+            mean = torch.tensor(mean, device="cuda", dtype=torch.float32)
+        else:
+            mean = mean.to(device="cuda", dtype=torch.float32)
+
+    # 执行减法操作，返回结果
     return x - mean
 
 class RepReader(ABC):
